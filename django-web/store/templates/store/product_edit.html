@@ -1,0 +1,52 @@
+<!-- store/templates/store/product_edit.html -->
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>상품 수정</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container mt-5">
+    <div class="card shadow">
+      <div class="card-header bg-warning text-dark">
+        <h4 class="mb-0">✏️ 상품 수정</h4>
+      </div>
+      <div class="card-body">
+        <form method="post" onsubmit="return confirm('이대로 수정하시겠습니까?');">
+          {% csrf_token %}
+          <div class="mb-3">
+            <span class="form-label">상품번호:</span>
+            <span class="ms-1">{{ product.number }}</span>
+            <input type="hidden" name="number" value="{{ product.number }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">상품명</label>
+            <input type="text" class="form-control" name="name" value="{{ product.name }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">가격</label>
+            <input type="number" class="form-control" name="price" value="{{ product.price }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">제조사</label>
+            <input type="text" class="form-control" name="manufacturer" value="{{ product.manufacturer }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">제조일자</label>
+            <input type="date" class="form-control" name="made_date" value="{{ product.made_date|date:'Y-m-d' }}" required>
+          </div>
+          <div class="d-grid">
+            <button type="submit" class="btn btn-success">수정 저장</button>
+          </div>
+        </form>
+      </div>
+      <div class="card-footer text-end">
+        <a href="{% url 'product_list' %}" class="btn btn-secondary">← 목록</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
