@@ -127,6 +127,13 @@ def product_edit(request):
 
         image = request.FILES.get('image')
         if image:
+            # ✅ 기존 이미지 삭제
+            if product.image_url:
+                old_path = os.path.join(settings.MEDIA_ROOT, product.image_url)
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+
+            # ✅ 새 이미지 저장
             image_name = f"{number}_{image.name}"
             image_path = os.path.join(settings.MEDIA_ROOT, 'pictures', image_name)
             os.makedirs(os.path.dirname(image_path), exist_ok=True)
@@ -135,6 +142,7 @@ def product_edit(request):
                     f.write(chunk)
             product.image_url = os.path.join('pictures', image_name)
 
+        # 기존 상품 덮어쓰기
         for i, p in enumerate(products):
             if p.number == number:
                 products[i] = product
