@@ -4,6 +4,7 @@ from .models import Product
 import pickle, os
 from datetime import datetime
 from django.http import JsonResponse
+from django.conf import settings
 
 PRODUCT_FILE = 'C:/test/store/products.pkl'
 
@@ -26,12 +27,25 @@ def product_add(request):
         manufacturer = request.POST['manufacturer']
         made_date = datetime.strptime(request.POST['made_date'], '%Y-%m-%d').date()
 
+        image = request.FILES.get('image')
+        image_url = None
+
+        if image:
+            image_name = f"{number}_{image.name}"
+            image_path = os.path.join(settings.MEDIA_ROOT, 'uploads', image_name)
+            os.makedirs(os.path.dirname(image_path), exist_ok=True)
+            with open(image_path, 'wb+') as f:
+                for chunk in image.chunks():
+                    f.write(chunk)
+            image_url = os.path.join('uploads', image_name)
+
         new_product = Product(number, name, price, manufacturer, made_date)
+        new_product.image_url = image_url  # ✅ 임시 속성
         products = load_products()
         products.append(new_product)
         save_products(products)
         return redirect('product_list')
-    
+
     return render(request, 'store/product_add.html')
 
 def product_detail_or_list(request):
