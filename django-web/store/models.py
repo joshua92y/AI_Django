@@ -10,4 +10,4 @@ class Product:
     price: int
     manufacturer: str
     made_date: date
-# Create your models here.
+    image_url: str = None  # ✅ 이 줄 추가

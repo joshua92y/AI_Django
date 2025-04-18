@@ -5,6 +5,7 @@ import pickle, os
 from datetime import datetime
 from django.http import JsonResponse
 from django.conf import settings
+from django.contrib import messages
 
 PRODUCT_FILE = 'C:/test/store/products.pkl'
 
@@ -26,10 +27,16 @@ def product_add(request):
         price = int(request.POST['price'])
         manufacturer = request.POST['manufacturer']
         made_date = datetime.strptime(request.POST['made_date'], '%Y-%m-%d').date()
-
         image = request.FILES.get('image')
-        image_url = None
 
+        # ✅ 중복 체크
+        products = load_products()
+        if any(p.number == number for p in products):
+            messages.error(request, f"이미 존재하는 상품번호입니다: {number}")
+            return render(request, 'store/product_add.html')
+
+        # 이미지 저장
+        image_url = None
         if image:
             image_name = f"{number}_{image.name}"
             image_path = os.path.join(settings.MEDIA_ROOT, 'uploads', image_name)
@@ -39,9 +46,7 @@ def product_add(request):
                     f.write(chunk)
             image_url = os.path.join('uploads', image_name)
 
-        new_product = Product(number, name, price, manufacturer, made_date)
-        new_product.image_url = image_url  # ✅ 임시 속성
-        products = load_products()
+        new_product = Product(number, name, price, manufacturer, made_date, image_url=image_url)
         products.append(new_product)
         save_products(products)
         return redirect('product_list')
@@ -120,13 +125,48 @@ def product_edit(request):
         product.manufacturer = request.POST['manufacturer']
         product.made_date = datetime.strptime(request.POST['made_date'], '%Y-%m-%d').date()
 
+        image = request.FILES.get('image')
+        if image:
+            image_name = f"{number}_{image.name}"
+            image_path = os.path.join(settings.MEDIA_ROOT, 'pictures', image_name)
+            os.makedirs(os.path.dirname(image_path), exist_ok=True)
+            with open(image_path, 'wb+') as f:
+                for chunk in image.chunks():
+                    f.write(chunk)
+            product.image_url = os.path.join('pictures', image_name)
+
         for i, p in enumerate(products):
             if p.number == number:
                 products[i] = product
                 break
         save_products(products)
 
-        # ✅ 수정 완료 후 상세페이지로 리다이렉트
         return redirect(f'/store/detail/?id={number}')
 
     return render(request, 'store/product_edit.html', {'product': product})
+
+def product_copy(request):
+    id_param = request.GET.get('id')
+    if not id_param or not id_param.isdigit():
+        return redirect('product_list')
+
+    number = int(id_param)
+    products = load_products()
+    original = next((p for p in products if p.number == number), None)
+
+    if not original:
+        return redirect('product_list')
+
+    # 복사 요청 시 기존 상품 정보를 전달 (number 제외)
+    initial = {
+        'name': original.name,
+        'price': original.price,
+        'manufacturer': original.manufacturer,
+        'made_date': original.made_date.strftime('%Y-%m-%d'),
+        'image_url': original.image_url,
+    }
+
+    return render(request, 'store/product_add.html', {
+        'initial': initial,
+        'copy_mode': True,  # 템플릿에서 복사임을 인식하게
+    })

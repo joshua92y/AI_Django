@@ -56,7 +56,8 @@
             <td>{{ product.made_date }}</td>
             <td>
               <a href="{% url 'product_edit' %}?id={{ product.number }}" class="btn btn-sm btn-outline-primary">수정</a>
-              <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteProduct('{{ product.number }}')">삭제</button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct('{{ product.number }}')">삭제</button>
+              <a href="{% url 'product_copy' %}?id={{ product.number }}" class="btn btn-sm btn-outline-success">복사</a>
             </td>
           </tr>
           {% empty %}
