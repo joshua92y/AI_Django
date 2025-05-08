@@ -1,0 +1,110 @@
+{% load custom_filters humanize %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>주문 상세 | Bookstore</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; background: #f8f9fa; margin: 0; padding: 0; }
+        .container { max-width: 800px; margin: 50px auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1 { text-align: center; margin-bottom: 30px; }
+        .order-info { margin-bottom: 20px; font-size: 1.1em; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; text-align: center; border-bottom: 1px solid #ddd; }
+        th { background-color: #f1f1f1; }
+        .total { text-align: right; font-weight: bold; margin-top: 20px; }
+        .back-button {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #4A90E2;
+            color: white;
+            border-radius: 5px;
+            text-decoration: none;
+        }
+        .back-button:hover {
+            background-color: #357ABD;
+        }
+        .cancel-button {
+            margin-top: 10px;
+            width: 100%;
+            padding: 12px;
+            background-color: #e63946;
+            color: white;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .cancel-button:hover {
+            background-color: #d63031;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧾 주문 상세</h1>
+
+        <div class="order-info">
+            주문번호: #{{ order.id }}<br>
+            주문일: {{ order.created_at|date:"Y-m-d H:i" }}
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>도서</th>
+                    <th>수량</th>
+                    <th>가격</th>
+                    <th>합계</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item, review in order_items %}
+                <tr>
+                    <td>{{ item.book.title }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.book.price|intcomma }}원</td>
+                    <td>{{ item.book.price|mul:item.quantity|intcomma }}원</td>
+                </tr>
+                
+                <tr>
+                    <td colspan="4">
+                        <form method="post" action="{% url 'write_review' item.book.id order.id %}">
+                            {% csrf_token %}
+                            <label>⭐ 별점:
+                                <select name="rating">
+                                    {% for i in "12345" %}
+                                    <option value="{{ i }}" {% if review and review.rating|stringformat:"s" == i %}selected{% endif %}>
+                                        {{ i }}점
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <br>
+                            <label>📝 {% if review %}리뷰 수정{% else %}한줄평{% endif %}:<br>
+                                <textarea name="comment" rows="3" cols="50" required>{{ review.comment }}</textarea>
+                            </label>
+                            <br>
+                            <button type="submit">{% if review %}수정하기{% else %}리뷰 남기기{% endif %}</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="total">
+            총 합계: {{ order.items.all|calc_order_total|intcomma }}원
+        </div>
+        {% if order.status == 'pending' %}
+        <form method="post" action="{% url 'cancel_order' order.id %}" style="margin-top: 20px;">
+            {% csrf_token %}
+            <button type="submit" class="cancel-button" onclick="return confirm('정말 주문을 취소하시겠습니까?');">❌ 주문 취소</button>
+        </form>
+        {% endif %}
+        <a href="{% url 'order_list' %}" class="back-button">← 주문 목록으로</a>
+    </div>
+</body>
+</html>

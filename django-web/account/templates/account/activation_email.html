@@ -1,0 +1,10 @@
+<!--accounts/templates/accounts/activation_email.html -->
+{{ user.username }}님, 안녕하세요!
+
+아래 링크를 클릭하여 이메일 인증을 완료해주세요.
+
+<a href="{{ activation_link }}">{{ activation_link }}</a>
+
+감사합니다.
+    
+    {{ site_name }} 드림

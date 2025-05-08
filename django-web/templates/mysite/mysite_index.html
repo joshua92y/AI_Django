@@ -1,0 +1,77 @@
+<!-- mysite/templates/mysite/mysite_index.html -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>MySite 포털</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: #f8f9fa;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+        }
+
+        .menu {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .menu-item {
+            background-color: #4a69bd;
+            color: white;
+            padding: 20px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 1.2em;
+            transition: background 0.3s;
+        }
+
+        .menu-item:hover {
+            background-color: #1e3799;
+        }
+
+        .footer {
+            margin-top: 30px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 MySite 포털 메인</h1>
+        <div class="menu">
+            <a href="/gugu/" class="menu-item">구구단 게임</a>
+            <a href="/store/" class="menu-item">스토어</a>
+            <!--<a href="/email/" class="menu-item">이메일</a>-->
+            <a href="/account/login/" class="menu-item">로그인</a>
+            <a href="/gbook/" class="menu-item">방명록</a>
+            <a href="/books/" class="menu-item">북스토어</a>
+            <a href="/AItest/" class="menu-item">쳇봇</a>
+        </div>
+
+        <div class="footer">
+            © 2025 MySite. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>로그인 페이지</title>
+</head>
+<body>
+    <h1>🙋‍♂️ 계정 페이지에 오신 것을 환영합니다!</h1>
+    <p>여기서 로그인, 회원가입, 계정 정보 관리를 할 수 있습니다.</p>
+
+    <!-- ✅ 메시지가 있으면 팝업으로 출력 -->
+    {% if messages %}
+        <script>
+            {% for message in messages %}
+                alert("{{ message|escapejs }}");
+            {% endfor %}
+        </script>
+    {% endif %}
+
+    <form method="post" action="{% url 'account:login' %}">
+        {% csrf_token %}
+        <p>아이디: <input type="text" name="username"></p>
+        <p>비밀번호: <input type="password" name="password"></p>
+        <button type="submit">🔐 로그인</button>
+    </form>
+
+    <ul>
+        <li><a href="{% url 'account:signup' %}">📝 회원가입</a></li>
+        <li><a href="{% url 'home' %}">홈으로</a></li>
+    </ul>
+</body>
+</html>

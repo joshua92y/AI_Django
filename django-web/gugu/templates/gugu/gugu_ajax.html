@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AJAX 구구단</title>
+    {% csrf_token %}
+    <!-- jQuery 라이브러리 로드 (AJAX 요청을 쉽게 하기 위해 사용) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+    <h1>AJAX로 구구단 출력</h1>
+    <a href="{% url 'home' %}">홈으로</a><br><br>
+    <!-- 유저가 단을 입력할 수 있는 입력창 -->
+    <label>단 입력: </label>
+    <input type="number" id="dan" value="7">  <!-- 기본값 7단 -->
+    
+    <!-- 클릭 시 AJAX 요청을 보낼 버튼 -->
+    <button id="getGugu">구구단 요청</button>
+    
+    <!-- 구구단 결과가 출력될 영역 -->
+    <div id="result" style="margin-top: 20px;"></div>
+
+
+    <!-- JavaScript 영역 -->
+    <script>
+        // 버튼 클릭 이벤트 등록
+        $('#getGugu').click(function() {
+            // 입력창에서 단 값을 가져옴
+            let dan = $('#dan').val();
+
+            // AJAX 요청 전송
+            $.ajax({
+                // 요청할 URL (Django의 URL 패턴에 맞춰짐)
+                url: `/gugu/ajax_gugu/${dan}/`,
+
+                // HTTP 메서드 (GET 방식으로 요청)
+                method: 'GET',
+
+                // 요청 성공 시 실행할 콜백 함수
+                success: function(data) {
+                    // 서버에서 받은 JSON 데이터에서 result 리스트 추출
+                    let html = "";
+
+                    // 리스트 안의 각 줄을 반복하면서 HTML 문자열로 만들기
+                    data.result.forEach(function(line) {
+                        html += line + "<br>";
+                    });
+
+                    // 최종 결과 HTML을 페이지에 삽입
+                    $('#result').html(html);
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>

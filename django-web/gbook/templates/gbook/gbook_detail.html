@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>📄 게시글 상세</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        .container {
+            margin-top: 30px;
+        }
+
+        .entry {
+            border: 1px solid #ddd;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+
+        .entry h2 {
+            margin-top: 0;
+        }
+
+        .buttons {
+            margin-top: 20px;
+        }
+
+        .buttons a {
+            margin-right: 10px;
+        }
+
+        .message-container {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        ul.file-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        ul.file-list li {
+            margin-bottom: 8px;
+        }
+
+        .delete-file {
+            background: none;
+            border: none;
+            color: #d00;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .delete-file:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>📄 게시글 상세</h1>
+    {% if messages %}
+        <script>
+            {% for message in messages %}
+                alert("{{ message|escapejs }}");
+            {% endfor %}
+        </script>
+    {% endif %}
+
+    <div id="message-container"></div>
+
+    <div class="container">
+        <div class="entry">
+            <h2>{{ entry.title }}</h2>
+            <p>{{ entry.message|linebreaksbr }}</p>
+            <p><strong>작성일:</strong> {{ entry.created_at|date:"Y-m-d H:i" }}</p>
+            <p><strong>조회수:</strong> {{ entry.views }}</p>
+
+            {% if entry.files.all %}
+                <p><strong>첨부파일:</strong></p>
+                <ul class="file-list" id="file-list">
+                    {% for f in entry.files.all %}
+                        <li id="file-{{ f.pk }}">
+                            <a href="{{ f.file.url }}" download>📎 {{ f.file.name|cut:"uploads/" }}</a>
+                            {% if user == entry.author %}
+                                <button class="delete-file" data-file-id="{{ f.pk }}">🗑 삭제</button>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+
+        <div class="buttons">
+            {% if user == entry.author %}
+                <a href="{% url 'gbook_edit' entry.pk %}">✏️ 수정</a>
+                <a href="#" id="delete-btn" data-pk="{{ entry.pk }}">🗑 삭제</a>
+            {% endif %}
+            <a href="{% url 'gbook_list' %}">📜 목록으로</a>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            // 게시글 삭제
+            $('#delete-btn').on('click', function(e) {
+                e.preventDefault();
+                if (confirm('정말로 삭제하시겠습니까?')) {
+                    var pk = $(this).data('pk');
+                    $.ajax({
+                        url: '/gbook/' + pk + '/delete/',
+                        type: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        success: function(response) {
+                            if (response.ok) {
+                                window.location.href = response.redirect_url;
+                            } else {
+                                $('#message-container').html(
+                                    '<div class="message-container error-message">삭제 중 오류가 발생했습니다.</div>'
+                                );
+                            }
+                        },
+                        error: function() {
+                            $('#message-container').html(
+                                '<div class="message-container error-message">서버 오류가 발생했습니다.</div>'
+                            );
+                        }
+                    });
+                }
+            });
+
+            // 첨부파일 개별 삭제
+            $('.delete-file').on('click', function(e) {
+                e.preventDefault();
+                if (!confirm('이 파일을 삭제하시겠습니까?')) return;
+
+                const fileId = $(this).data('file-id');
+
+                $.ajax({
+                    url: `/gbook/file/${fileId}/delete/`,
+                    type: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        if (response.ok) {
+                            $('#file-' + fileId).remove();
+                        } else {
+                            alert(response.error || '삭제 실패');
+                        }
+                    },
+                    error: function() {
+                        alert('서버 오류가 발생했습니다.');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

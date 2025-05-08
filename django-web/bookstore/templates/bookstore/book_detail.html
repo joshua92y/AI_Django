@@ -1,0 +1,206 @@
+<!--Bookstore/book_detail.html-->
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ book.title }} | Bookstore</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #ffffff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+        .book-detail {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            align-items: flex-start;
+        }
+        .book-image {
+            flex: 1 1 300px;
+            text-align: center;
+        }
+        .book-image img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+        .book-info {
+            flex: 2 1 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        h1 {
+            margin-top: 0;
+            color: #333;
+        }
+        .price, .subtotal {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #e63946;
+        }
+        .button-group {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .buy-button, .cart-button {
+            flex: 1 1 150px;
+            padding: 15px;
+            background-color: #4A90E2;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+        .buy-button:hover {
+            background-color: #357ABD;
+        }
+        .cart-button {
+            background-color: #00C851;
+        }
+        .cart-button:hover {
+            background-color: #007E33;
+        }
+        .quantity-input {
+            width: 80px;
+            font-size: 1em;
+            padding: 5px;
+            text-align: center;
+            margin-top: 10px;
+        }
+        @media (max-width: 768px) {
+            .book-detail {
+                flex-direction: column;
+                align-items: center;
+            }
+            .book-info {
+                text-align: center;
+            }
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="book-detail">
+            <div class="book-image">
+                <img src="/static/{{ book.image }}" alt="{{ book.title }}">
+            </div>
+            <div class="book-info">
+                <h1>{{ book.title }}</h1>
+                <p><strong>저자:</strong> {{ book.author }}</p>
+                <p><strong>출판사:</strong> {{ book.publisher }}</p>
+                <p><strong>출판일:</strong> {{ book.pubdate }}</p>
+                <p>{{ book.description }}</p>
+
+                <!-- 원래 가격은 고정 -->
+                <p class="price">가격: {{ book.price|intcomma }}원</p>
+
+                <!-- 수량 입력 -->
+                <p>수량:  
+                    <input type="number" id="quantity" class="quantity-input" value="1" min="1" onchange="updateSubtotal()">
+                </p>
+
+                <!-- 합계 영역 (여기만 동적 변경) -->
+                <p class="subtotal" id="subtotal">
+                    합계: {{ book.price|intcomma }}원 × 1개 = {{ book.price|intcomma }}원
+                </p>
+
+                <!-- 버튼 그룹 -->
+                <div class="button-group">
+                    <button type="button" onclick="buyNow('{{ book.pk }}')" class="buy-button">📚 구매하기</button>
+                    <button type="button" onclick="addToCart('{{ book.pk }}')" class="cart-button">🛒 장바구니 담기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 30px;">
+        <a href="{% url 'book_list' %}" style="padding: 10px 20px; background-color: #4A90E2; color: white; border-radius: 5px; text-decoration: none;">← 목록으로 돌아가기</a>
+    </div>
+    <hr style="margin: 40px 0;">
+    <h2>📢 독자 리뷰</h2>
+
+    {% if reviews %}
+        <ul style="list-style: none; padding: 0;">
+            {% for review in reviews %}
+                <li style="margin-bottom: 20px; background: #f4f4f4; padding: 15px; border-radius: 6px;">
+                    <p><strong>{{ review.reviewer.username }}</strong> | ⭐ {{ review.rating }}점</p>
+                    <p>{{ review.comment|linebreaksbr }}</p>
+                    <p style="font-size: 0.9em; color: #666;">{{ review.created_at|date:"Y-m-d H:i" }}</p>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>아직 작성된 리뷰가 없습니다.</p>
+    {% endif %}
+
+    <script>
+        const price = {{ book.price }};
+
+        function updateSubtotal() {
+            const quantity = parseInt(document.getElementById('quantity').value) || 1;
+            const subtotal = price * quantity;
+            document.getElementById('subtotal').innerText = `합계: ${price.toLocaleString()}원 × ${quantity}개 = ${subtotal.toLocaleString()}원`;
+        }
+
+        function addToCart(bookId) {
+            const quantity = parseInt(document.getElementById('quantity').value) || 1;
+            fetch(`/books/${bookId}/add-to-cart/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ quantity: quantity })
+            }).then(response => response.json())
+              .then(data => {
+                if (data.ok) {
+                    if (confirm('장바구니에 담았습니다. 장바구니로 이동하시겠습니까?')) {
+                        window.location.href = '/books/cart/';
+                    }
+                }
+            });
+        }
+
+        function buyNow(bookId) {
+            const quantity = parseInt(document.getElementById('quantity').value) || 1;
+            fetch("{% url 'order_page' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    books: [{ id: bookId, quantity: quantity }]
+                })
+            }).then(response => response.text())
+              .then(html => {
+                  document.open();
+                  document.write(html);
+                  document.close();
+              });
+        }
+    </script>
+</body>
+</html>

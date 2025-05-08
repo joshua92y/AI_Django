@@ -1,0 +1,189 @@
+<!-- gbook/templates/gbook/gbook_list.html -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>📘 게시판</title>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            margin: 40px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .write-btn {
+            margin-top: 20px;
+        }
+
+        .search-form {
+            margin-top: 20px;
+        }
+
+        .author-info {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .message-preview {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .title-author {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .title {
+            font-weight: bold;
+            color: #333;
+            text-decoration: none;
+        }
+
+        .title:hover {
+            text-decoration: underline;
+        }
+
+        .author {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .auth-info {
+            margin-bottom: 20px;
+            background: #eef5ff;
+            padding: 15px;
+            border: 1px solid #cfd9e6;
+            border-radius: 8px;
+        }
+
+        .auth-info a.button {
+            display: inline-block;
+            margin-left: 10px;
+            padding: 5px 10px;
+            background-color: #4A90E2;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 0.9em;
+            transition: background-color 0.3s;
+        }
+
+        .auth-info a.button:hover {
+            background-color: #357ABD;
+        }
+
+        .logout-button {
+            background: none;
+            border: none;
+            color: #4A90E2;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <h1>📘 게시판</h1>
+
+    <!-- ✅ 로그인 사용자 안내 -->
+    <div class="auth-info">
+        {% if request.user.is_authenticated %}
+            👋 안녕하세요, <strong>{{ request.user.username }}</strong>님!
+            <form method="post" action="{% url 'account:logout' %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="logout-button">🔓 로그아웃</button>
+            </form>
+        {% else %}
+            🔒 <strong>로그인이 필요합니다.</strong>
+            <a href="{% url 'account:login' %}" class="button">로그인하러 가기 →</a><br>
+            <a href="{% url 'home' %}" class="button">홈으로</a>
+        {% endif %}
+    </div>
+
+    <!-- 검색창 -->
+    <form method="get" class="search-form">
+        <input type="text" name="q" placeholder="검색어 입력..." value="{{ request.GET.q }}">
+        <button type="submit">🔍 검색</button>
+    </form>
+
+    <!-- 새 글 쓰기 버튼 (로그인 상태일 때만 표시) -->
+    {% if request.user.is_authenticated %}
+        <p class="write-btn"><a href="{% url 'gbook_create' %}">✍️ 새 글 쓰기</a></p>
+    {% endif %}
+
+    {% if entries %}
+        <table>
+            <thead>
+                <tr>
+                    <th>제목</th>
+                    <th>내용</th>
+                    <th>작성자</th>
+                    <th>조회수</th>
+                    <th>첨부</th> <!-- 추가 -->
+                    <th>작성일</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'gbook_detail' entry.pk %}" class="title">
+                                {{ entry.title }}
+                            </a>
+                        </td>
+                        <td>
+                            <span class="message-preview">
+                                {{ entry.message|truncatewords:10 }}
+                            </span>
+                        </td>
+                        <td>{{ entry.author.username }}</td>
+                        <td>{{ entry.views }}</td>
+                        <td>
+                            {% with entry.files.count as file_count %}
+                                {% if file_count > 0 %}
+                                    📎 {{ file_count }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td>{{ entry.created_at|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>아직 작성된 글이 없습니다.</p>
+    {% endif %}
+</body>
+</html>

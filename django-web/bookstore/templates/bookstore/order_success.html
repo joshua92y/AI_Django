@@ -1,0 +1,99 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>주문 완료 | Bookstore</title>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: #f8f9fa;
+            margin: 0;
+            padding: 50px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 {
+            color: #4A90E2;
+            margin-bottom: 30px;
+            font-size: 1.8em;
+        }
+        .order-detail {
+            text-align: left;
+            margin-top: 20px;
+            font-size: 1em;
+        }
+        .order-detail h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .order-detail ul {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0 20px 0;
+        }
+        .order-detail ul li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+        .order-detail ul li::before {
+            content: '📚';
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+        .order-detail p {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #555;
+        }
+        .home-button {
+            margin-top: 30px;
+            display: inline-block;
+            padding: 12px 25px;
+            background-color: #4A90E2;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 1.1em;
+            transition: background-color 0.3s;
+        }
+        .home-button:hover {
+            background-color: #357ABD;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✅ 주문이 완료되었습니다!</h1>
+
+        <div class="order-detail">
+            <h3>주문 번호: <span style="color: #4A90E2;">#{{ order.id }}</span></h3>
+
+            <h4 style="margin-top: 20px; margin-bottom: 10px;">🛒 주문 목록</h4>
+            <ul>
+                {% for item in order.items.all %}
+                    <li>{{ item.book.title }} - {{ item.quantity }}개</li>
+                {% endfor %}
+            </ul>
+
+            <p>📅 주문 일시: {{ order.created_at|date:"Y-m-d H:i" }}</p>
+        </div>
+
+        <a href="{% url 'book_list' %}" class="home-button">🏠 쇼핑 계속하기</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AJAX Calculator</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- CSRF 토큰을 meta 태그로 전달 -->
+    <meta name="csrf-token" content="{{ csrf_token }}">
+</head>
+<body>
+    <h1>AJAX Calculator</h1>
+
+    <form id="calculator-form">
+        <label for="num1">Number 1:</label>
+        <input type="number" id="num1" name="num1" required>
+        <br>
+        <label for="num2">Number 2:</label>
+        <input type="number" id="num2" name="num2" required>
+        <br>
+        <button type="submit">Add</button>
+    </form>
+
+    <h2>Result: <span id="result">0</span></h2>
+
+    <script>
+        // CSRF 토큰을 jQuery Ajax 요청 헤더에 자동 삽입
+        const csrftoken = $('meta[name="csrf-token"]').attr('content');
+        $.ajaxSetup({
+            headers: { 'X-CSRFToken': csrftoken }
+        });
+
+        $(document).ready(function () {
+            $('#calculator-form').on('submit', function (event) {
+                event.preventDefault();
+
+                const num1 = $('#num1').val();
+                const num2 = $('#num2').val();
+
+                $.ajax({
+                    url: '/gugu/add/',  // Django의 view에 매핑된 URL
+                    method: 'POST',
+                    data: {
+                        num1: num1,
+                        num2: num2
+                    },
+                    success: function (response) {
+                        $('#result').text(response.result);
+                    },
+                    error: function () {
+                        alert('오류가 발생했습니다.');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

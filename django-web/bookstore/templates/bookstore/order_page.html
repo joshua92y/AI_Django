@@ -1,0 +1,145 @@
+{% load custom_filters humanize %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>주문 확인 | Bookstore</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+            vertical-align: middle;
+        }
+        th {
+            background-color: #f1f1f1;
+        }
+        .book-image {
+            width: 50px;
+            height: 70px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        input[type="number"] {
+            width: 60px;
+            padding: 5px;
+            font-size: 1em;
+            text-align: center;
+        }
+        .total {
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: right;
+            margin-top: 10px;
+        }
+        .submit-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background-color: #4A90E2;
+            color: white;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .submit-btn:hover {
+            background-color: #357ABD;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧾 주문 확인</h1>
+
+        <form method="post" action="{% url 'order_submit' %}">
+            {% csrf_token %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>이미지</th>
+                        <th>도서</th>
+                        <th>수량</th>
+                        <th>가격</th>
+                        <th>합계</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>
+                            <img src="/static/{{ item.book.image }}" alt="{{ item.book.title }}" class="book-image">
+                        </td>
+                        <td>{{ item.book.title }}</td>
+                        <td>
+                            <input type="number" name="quantity_{{ item.book.id }}" value="{{ item.quantity }}" min="1">
+                        </td>
+                        <td>{{ item.book.price|intcomma }}원</td>
+                        <td>{{ item.book.price|mul:item.quantity|intcomma }}원</td>
+                        <input type="hidden" name="books" value="{{ item.book.id }}">
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div class="total">
+                총 합계: {{ total_price|intcomma }}원
+            </div>
+
+            <button type="submit" class="submit-btn">✅ 주문 확정</button>
+        </form>
+    </div>
+    <script>
+        function updateTotals() {
+            let total = 0;
+    
+            document.querySelectorAll('tbody tr').forEach(row => {
+                const priceText = row.querySelector('td:nth-child(4)').innerText.replace(/[^\d]/g, '');
+                const price = parseInt(priceText, 10);
+                const quantityInput = row.querySelector('input[type="number"]');
+                const quantity = parseInt(quantityInput.value) || 1;
+    
+                // 도서별 합계 계산
+                const subtotal = price * quantity;
+                row.querySelector('td:nth-child(5)').innerText = subtotal.toLocaleString() + '원';
+    
+                total += subtotal;
+            });
+    
+            document.querySelector('.total').innerHTML = '총 합계: ' + total.toLocaleString() + '원';
+        }
+    
+        // 수량 입력값이 바뀔 때마다 실행되도록 이벤트 연결
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('input[type="number"]').forEach(input => {
+                input.addEventListener('input', updateTotals);
+            });
+            updateTotals();  // 초기값 계산
+        });
+    </script>
+</body>
+</html>

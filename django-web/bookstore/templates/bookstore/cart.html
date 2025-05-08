@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>장바구니 | Bookstore</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: #f8f9fa;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+        h1 {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        form.cart-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .cart-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .checkbox {
+            transform: scale(1.5);
+            margin: 0;
+        }
+        .cart-item img {
+            width: 80px;
+            height: 110px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        .cart-info {
+            flex-grow: 1;
+        }
+        .cart-info h3 {
+            margin: 0;
+            font-size: 1.1em;
+        }
+        .cart-info p {
+            margin: 5px 0;
+            color: #555;
+        }
+        .input-quantity {
+            width: 60px;
+            padding: 5px;
+            font-size: 1em;
+            text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .update-button {
+            background-color: #34a853;
+            padding: 6px 10px;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-left: 8px;
+        }
+        .delete-button {
+            background-color: #e63946;
+            padding: 6px 10px;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .cart-actions {
+            margin-top: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        .cart-actions button, .cart-actions a {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn-delete-selected {
+            background-color: #ff6b6b;
+            color: white;
+        }
+        .btn-empty-cart {
+            background-color: #feca57;
+            color: black;
+        }
+        .btn-continue {
+            background-color: #4a69bd;
+            color: white;
+        }
+        .btn-order {
+            background-color: #4A90E2;
+            color: white;
+        }
+        .btn-order-selected {
+            background-color: #00C851;
+            color: white;
+        }
+        .total-price {
+            text-align: right;
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-top: 30px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="user-info" style="text-align: right; margin-bottom: 20px;">
+            {% if request.user.is_authenticated %}
+                👋 <strong>{{ request.user.username }}</strong>님 환영합니다!
+                <form method="post" action="{% url 'account:logout' %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" style="background:none; border:none; color:#00f; cursor:pointer;">로그아웃</button>
+                </form>
+            {% else %}
+                <a href="{% url 'account:login' %}" style="color:blue;">🔑 로그인</a>
+            {% endif %}
+        </div>
+
+        <h1>🛒 장바구니</h1>
+        {% load custom_filters humanize %}
+
+        {% if books %}
+            <form class="cart-form" id="cart-form">
+                {% for book in books %}
+                <div class="cart-item" id="item-{{ book.id }}">
+                    <input type="checkbox" class="checkbox" name="selected" value="{{ book.id }}">
+                    <a href="{% url 'book_detail' book.id %}">
+                        <img src="/static/{{ book.image }}" alt="{{ book.title }}">
+                    </a>
+                    <div class="cart-info">
+                        <a href="{% url 'book_detail' book.id %}">
+                            <h3>{{ book.title }}</h3>
+                        </a>
+                        <p class="price-text">가격: {{ book.price|intcomma }}원</p>
+                        <input type="number" min="1" value="{{ cart_quantities|default_if_none:''|dict_get:book.id|default:1 }}" id="quantity-{{ book.id }}" class="input-quantity">
+                        <button type="button" class="update-button" onclick="updateQuantity('{{ book.id }}')">수정</button>
+                    </div>
+                    {% with quantity=cart_quantities|dict_get:book.id|default:1 %}
+                    <p class="subtotal-text" id="subtotal-{{ book.id }}">
+                        합계: {{ book.price|intcomma }}원 × {{ quantity }}개 = {{ book.price|mul:quantity|intcomma }}원
+                    </p>
+                    {% endwith %}
+                    <button type="button" class="delete-button" onclick="removeItem('{{ book.id }}')">삭제</button>
+                </div>
+                {% endfor %}
+
+                <div class="total-price">
+                    총 합계: <span id="total-price">0</span> 원
+                </div>
+
+                <div class="cart-actions">
+                    <button type="button" class="btn-delete-selected" onclick="deleteSelected()">🗑️ 선택 삭제</button>
+                    <button type="button" class="btn-empty-cart" onclick="emptyCart()">🧹 장바구니 비우기</button>
+                    <a href="{% url 'book_list' %}" class="btn-continue">← 계속 쇼핑하기</a>
+                    <button type="button" class="btn-order" onclick="orderCart()">🧾 전체 주문</button>
+                    <button type="button" class="btn-order-selected" onclick="orderSelected()">✅ 선택 주문</button>
+                </div>
+            </form>
+        {% else %}
+            <p style="text-align:center;">장바구니가 비어 있습니다.</p>
+            <div class="cart-actions">
+                <a href="{% url 'book_list' %}" class="btn-continue">← 계속 쇼핑하기</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- ✅ 자바스크립트는 무조건 body 맨 마지막에 -->
+    <script>
+        const isAuthenticated = {{ request.user.is_authenticated|yesno:"true,false" }};
+    
+        function updateTotal() {
+            let total = 0;
+            document.querySelectorAll('.cart-item').forEach(item => {
+                const priceText = item.querySelector('.cart-info p').innerText;
+                const price = parseInt(priceText.replace(/[^\d]/g, ''));
+                const quantity = parseInt(item.querySelector('.input-quantity').value) || 1;
+                total += price * quantity;
+            });
+            document.getElementById('total-price').innerText = total.toLocaleString();
+        }
+    
+        function updateQuantity(bookId) {
+            const quantityInput = document.getElementById('quantity-' + bookId);
+            const quantity = parseInt(quantityInput.value) || 1;
+            const item = document.getElementById('item-' + bookId);
+            const priceText = item.querySelector('.cart-info p').innerText;
+            const price = parseInt(priceText.replace(/[^\d]/g, ''));
+    
+            fetch(`/books/${bookId}/update-quantity/`, {
+                method: 'POST',
+                headers: {'X-CSRFToken': '{{ csrf_token }}','Content-Type': 'application/json'},
+                body: JSON.stringify({quantity: quantity})
+            }).then(response => {
+                if (response.ok) {
+                    updateTotal();
+                    const totalText = `합계: ${price.toLocaleString()}원 × ${quantity}개 = ${(price * quantity).toLocaleString()}원`;
+                    item.querySelector('p.subtotal-text').innerText = totalText;
+                }
+            });
+        }
+    
+        function removeItem(bookId) {
+            if (confirm('정말 삭제하시겠습니까?')) {
+                fetch(`/books/${bookId}/remove-from-cart/`, {
+                    method: 'POST',
+                    headers: {'X-CSRFToken': '{{ csrf_token }}'}
+                }).then(() => {
+                    document.getElementById('item-' + bookId).remove();
+                    updateTotal();
+                });
+            }
+        }
+    
+        function deleteSelected() {
+            const checked = document.querySelectorAll('input[name="selected"]:checked');
+            if (checked.length === 0) {
+                alert('삭제할 항목을 선택하세요.');
+                return;
+            }
+            if (confirm('선택한 상품을 삭제하시겠습니까?')) {
+                const ids = Array.from(checked).map(box => box.value);
+                fetch('/books/delete-selected/', {
+                    method: 'POST',
+                    headers: {'X-CSRFToken': '{{ csrf_token }}','Content-Type': 'application/json'},
+                    body: JSON.stringify({ids: ids})
+                }).then(() => {
+                    ids.forEach(id => {
+                        const item = document.getElementById('item-' + id);
+                        if (item) item.remove();
+                    });
+                    updateTotal();
+                });
+            }
+        }
+    
+        function emptyCart() {
+            if (confirm('정말 장바구니를 비우시겠습니까?')) {
+                fetch('/books/empty-cart/', {
+                    method: 'POST',
+                    headers: {'X-CSRFToken': '{{ csrf_token }}'}
+                }).then(() => {
+                    window.location.reload();
+                });
+            }
+        }
+    
+        function orderCart() {
+            if (!isAuthenticated) {
+                alert('회원만 주문이 가능합니다.');
+                window.location.href = "{% url 'account:login' %}?next={{ request.path }}";
+                return;
+            }
+            const bookItems = document.querySelectorAll('.cart-item');
+            const books = [];
+    
+            bookItems.forEach(item => {
+                const bookId = item.querySelector('.checkbox').value;
+                const quantity = parseInt(item.querySelector('.input-quantity').value) || 1;
+                books.push({ id: bookId, quantity: quantity });
+            });
+    
+            if (books.length === 0) {
+                alert('주문할 상품이 없습니다.');
+                return;
+            }
+    
+            sendOrder(books);
+        }
+    
+        function orderSelected() {
+            if (!isAuthenticated) {
+                alert('회원만 주문이 가능합니다.');
+                window.location.href = "{% url 'account:login' %}?next={{ request.path }}";
+                return;
+            }
+            const checked = document.querySelectorAll('input[name="selected"]:checked');
+            const books = [];
+    
+            checked.forEach(box => {
+                const item = document.getElementById('item-' + box.value);
+                const quantity = parseInt(item.querySelector('.input-quantity').value) || 1;
+                books.push({ id: box.value, quantity: quantity });
+            });
+    
+            if (books.length === 0) {
+                alert('주문할 상품을 선택하세요.');
+                return;
+            }
+    
+            sendOrder(books);
+        }
+    
+        function sendOrder(books) {
+            fetch("{% url 'order_page' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ books: books })
+            })
+            .then(response => response.text())
+            .then(html => {
+                const container = document.querySelector('.container');
+                container.innerHTML = html;
+                history.pushState({ page: 'order_page' }, '', '/books/order/');
+        
+                // ✅ 주문 확인 페이지로 바뀐 다음, 수량 변경 이벤트 다시 연결
+                initOrderPageScripts();
+            });
+        }
+    
+        // ✅ popstate 이벤트 (뒤로가기/앞으로가기) 대응
+        window.addEventListener('popstate', (event) => {
+            // 뒤로가기나 앞으로가기를 했을 때
+            const path = location.pathname;
+            if (path === '/books/cart/') {
+                window.location.href = "{% url 'cart' %}";
+            } else if (path === '/books/order/') {
+                window.location.href = "{% url 'order_page' %}";
+            } else {
+                window.location.href = "/";
+            }
+        });
+    
+        document.addEventListener('DOMContentLoaded', updateTotal);
+
+        function initOrderPageScripts() {
+            function updateTotals() {
+                let total = 0;
+                document.querySelectorAll('tbody tr').forEach(row => {
+                    const priceText = row.querySelector('td:nth-child(4)').innerText.replace(/[^\d]/g, '');
+                    const price = parseInt(priceText, 10);
+                    const quantityInput = row.querySelector('input[type="number"]');
+                    const quantity = parseInt(quantityInput.value) || 1;
+                    const subtotal = price * quantity;
+                    row.querySelector('td:nth-child(5)').innerText = subtotal.toLocaleString() + '원';
+                    total += subtotal;
+                });
+                document.querySelector('.total').innerHTML = '총 합계: ' + total.toLocaleString() + '원';
+            }
+        
+            document.querySelectorAll('input[type="number"]').forEach(input => {
+                input.addEventListener('input', updateTotals);
+            });
+        
+            updateTotals();
+        }
+    </script>
+    
+
+</body>
+</html>

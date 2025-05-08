@@ -1,0 +1,97 @@
+{% load custom_filters humanize %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>주문 내역 | Bookstore</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; background: #f8f9fa; margin: 0; padding: 0; }
+        .container { max-width: 1000px; margin: 50px auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1 { text-align: center; margin-bottom: 30px; }
+        .home-button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin-bottom: 20px;
+            background-color: #4A90E2;
+            color: white;
+            border-radius: 5px;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+        .home-button:hover {
+            background-color: #357ABD;
+        }
+        .order { border: 1px solid #ddd; padding: 20px; margin-bottom: 20px; border-radius: 10px; }
+        .order-header { margin-bottom: 10px; font-weight: bold; }
+        .order-item { margin-left: 20px; margin-bottom: 5px; }
+        .total-price { text-align: right; font-weight: bold; margin-top: 10px; }
+        .pagination { text-align: center; margin-top: 30px; }
+        .pagination a, .pagination span {
+            display: inline-block;
+            margin: 0 5px;
+            padding: 8px 12px;
+            color: #333;
+            text-decoration: none;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .pagination .current {
+            background-color: #4A90E2;
+            color: white;
+            border: 1px solid #4A90E2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{% url 'home' %}" class="home-button">🏠 홈으로</a>
+
+        <h1>🧾 주문 내역</h1>
+
+        {% if orders %}
+            {% for order in orders %}
+            <a href="{% url 'order_detail' order.id %}" style="text-decoration:none; color:#333;">
+                <div class="order">
+                    <div class="order-header">
+                        주문번호 #{{ order.id }} | 주문일: {{ order.created_at|date:"Y-m-d H:i" }}
+                        상태: 
+                        {% if order.status == 'pending' %}
+                            <span style="color:green;">주문완료</span>
+                        {% else %}
+                            <span style="color:red;">취소됨</span>
+                        {% endif %}
+                    </div>
+                    {% for item in order.items.all %}
+                        <div class="order-item">
+                            📚 {{ item.book.title }} (수량: {{ item.quantity }})
+                        </div>
+                    {% endfor %}
+                    <div class="total-price">
+                        총 합계: {{ order.items.all|calc_order_total|intcomma }}원
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+
+            <!-- ✅ 페이지네이션 추가 -->
+            <div class="pagination">
+                {% if orders.has_previous %}
+                    <a href="?page=1">처음</a>
+                    <a href="?page={{ orders.previous_page_number }}">이전</a>
+                {% endif %}
+
+                <span class="current">{{ orders.number }} / {{ orders.paginator.num_pages }}</span>
+
+                {% if orders.has_next %}
+                    <a href="?page={{ orders.next_page_number }}">다음</a>
+                    <a href="?page={{ orders.paginator.num_pages }}">끝</a>
+                {% endif %}
+            </div>
+
+        {% else %}
+            <p style="text-align:center;">주문 내역이 없습니다.</p>
+        {% endif %}
+    </div>
+</body>
+</html>
