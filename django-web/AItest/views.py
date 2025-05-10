@@ -1,15 +1,98 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 import os
-from dotenv import load_dotenv
-import openai
-import logging
 import re
+from dotenv import load_dotenv
+import logging
 from django.utils.safestring import mark_safe
 from django.utils.html import escape
 from django.views.decorators.csrf import csrf_exempt
-
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain.vectorstores import FAISS
+from langchain.prompts import PromptTemplate
+from langchain.chains import ConversationalRetrievalChain
+from langchain.memory import ConversationBufferMemory
+from langchain.docstore.document import Document
+from langchain.document_loaders import PyPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 logger = logging.getLogger(__name__)
+
+# Initialize LangChain components
+def initialize_langchain(request):
+    # Load environment variables
+    env_path = os.path.join(os.path.dirname(__file__), '.env')
+    load_dotenv(dotenv_path=env_path, override=True)
+    api_key = os.environ.get("OPENAI_API_KEY")
+    
+    if not api_key:
+        raise ValueError("API Key not found.")
+
+    # Initialize LLM
+    llm = ChatOpenAI(model="gpt-4o-mini")
+
+    # Initialize Embeddings
+    embeddings = OpenAIEmbeddings()
+
+    # Sample documents for the vector store
+  # 2️⃣ PDF 파일 로드
+    pdf_path = "C:/Users/Admin/Documents/카카오톡 받은 파일/상권분석.pdf"
+    loader = PyPDFLoader(pdf_path)
+    pages = loader.load()  # langchain Document 객체 리스트 반환
+
+    print(f"🔍 PDF에서 {len(pages)}개의 페이지 로드됨")
+
+    # 3️⃣ 긴 문서를 chunk로 분리
+    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+    docs = splitter.split_documents(pages)
+
+    print(f"📝 {len(docs)}개의 문서 조각으로 분할 완료")
+
+
+    # Create vector store
+    vectorstore = FAISS.from_documents(docs, embeddings)
+    retriever = vectorstore.as_retriever()
+
+    # Get chat history from session or initialize empty
+    chat_history = request.session.get('chat_history', [])
+    
+    # Create memory with chat history
+    memory = ConversationBufferMemory(
+        memory_key="chat_history",
+        return_messages=True,
+        output_key="answer"
+    )
+    
+    # Load previous chat history into memory
+    for message in chat_history:
+        user_message = message.get('Human') or message.get('user')
+        ai_message = message.get('AI') or message.get('ai')
+
+        if user_message and ai_message:
+            memory.chat_memory.add_user_message(user_message)
+            memory.chat_memory.add_ai_message(ai_message)
+
+    # Create prompt template
+    prompt = PromptTemplate(
+        input_variables=["chat_history", "context", "question"],
+        template=(
+            "당신은 똑똑한 AI 어시스턴트입니다.\n"
+            "참고: {context}\n"
+            "질문: {question}\n"
+            "지금까지의 대화:\n{chat_history}\n"
+            "답변:"
+        )
+    )
+
+    # Create QA chain
+    qa_chain = ConversationalRetrievalChain.from_llm(
+        llm=llm,
+        retriever=retriever,
+        memory=memory,
+        combine_docs_chain_kwargs={"prompt": prompt},
+        return_source_documents=True
+    )
+
+    return qa_chain
 
 def format_response(text):
     # 줄바꿈 처리
@@ -38,11 +121,6 @@ def format_response(text):
 def index(request):
     return render(request, 'AItest/chat.html')
 
-
-def format_response(text):
-    # 필요한 경우 HTML 이스케이프 등 처리
-    return escape(text)
-
 @csrf_exempt
 def send(request):
     if request.method == 'POST':
@@ -52,36 +130,20 @@ def send(request):
             return JsonResponse({'error': '메시지가 비어 있습니다.'}, status=400)
 
         try:
-            # 🔐 .env에서 API 키 로드
-            env_path = os.path.join(os.path.dirname(__file__), '.env')
-            load_dotenv(dotenv_path=env_path, override=True)
-            api_key = os.environ.get("OPENAI_API_KEY")
+            # Initialize LangChain components with request
+            qa_chain = initialize_langchain(request)
 
-            if not api_key:
-                return JsonResponse({'error': 'API Key를 불러오지 못했습니다.'}, status=500)
+            # Get response from QA chain
+            result = qa_chain.invoke({"question": user_message})
+            bot_response = result['answer'].strip()
 
-            client = openai.OpenAI(api_key=api_key)
-
-            # ✅ 세션에서 대화 이력 불러오기
+            # Update chat history in session
             chat_history = request.session.get('chat_history', [])
-
-            # ✅ 새 메시지 추가
-            chat_history.append({"role": "user", "content": user_message})
-
-            # 이전까지 assistant 응답이 있었다면 포함
-            # (chat_history 전체 전달 가능)
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "system", "content": "You are a helpful assistant."}] + chat_history,
-            )
-
-            bot_response = response.choices[0].message.content.strip()
-
-            # ✅ 봇 응답을 이력에 추가
-            chat_history.append({"role": "assistant", "content": bot_response})
-
-            # ✅ 최대 10개 메시지만 기억 (원한다면 조정 가능)
-            request.session['chat_history'] = chat_history[-10:]
+            chat_history.append({
+                'Human': user_message,
+                'AI': bot_response
+            })
+            request.session['chat_history'] = chat_history
 
             return JsonResponse({'response': format_response(bot_response)})
 
