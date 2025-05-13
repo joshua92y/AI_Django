@@ -8,12 +8,12 @@ from django.utils.safestring import mark_safe
 from django.utils.html import escape
 from django.views.decorators.csrf import csrf_exempt
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain.vectorstores import FAISS
+from langchain_community.vectorstores import FAISS
 from langchain.prompts import PromptTemplate
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
 from langchain.docstore.document import Document
-from langchain.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 logger = logging.getLogger(__name__)
 
